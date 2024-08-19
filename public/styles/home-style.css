@@ -10,7 +10,7 @@
 
 body {
   display: flex;
-  background-color: #101010;
+  background-color: #101010 !important;
   color: #ffffff;
   font-family: "Roboto", sans-serif;
   font-weight: 400;

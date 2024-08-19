@@ -5,7 +5,7 @@ import { useState } from "react";
 import axios from "axios";
 import { AUTH_ENDPOINT } from "@/globals/endpoints";
 import { ERROR_MESSAGE, SUCCESS_MESSAGE } from "@/globals/swal";
-
+import { useRouter } from "next/navigation";
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
 
@@ -14,6 +14,8 @@ export default function Login() {
 
   const [firstname, setFirstname] = useState("");
   const [lastname, setLastname] = useState("");
+
+  const router = useRouter();
 
   const login = async () => {
     if (!username.length > 0 && !password.length > 0) {
@@ -36,7 +38,11 @@ export default function Login() {
 
       if (res.status === 200) {
         if (res.data && res.data.success) {
-          SUCCESS_MESSAGE("Success", "Logged in successfully");
+          // SUCCESS_MESSAGE("Success", "Logged in successfully");
+
+          sessionStorage.setItem("user", JSON.stringify(res.data.success));
+
+          router.push("/Home");
         } else if (res.data && res.data.error) {
           ERROR_MESSAGE("Auth Failed!", res.data.error);
         } else {

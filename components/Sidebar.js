@@ -2,9 +2,9 @@ import React from "react";
 
 const Sidebar = () => {
   return (
-    <section class="suggestions">
-      <div class="suggestions-fy">
-        <div class="title-suggestions">
+    <section className="suggestions">
+      <div className="suggestions-fy">
+        <div className="title-suggestions">
           <p>Users you may know</p>
 
           <p>See All</p>
@@ -12,7 +12,7 @@ const Sidebar = () => {
 
         <ul>
           <li>
-            <div class="user-info">
+            <div className="user-info">
               <img
                 src="/images/maloi.jpg"
                 alt="user image"
