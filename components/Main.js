@@ -8,8 +8,9 @@ import { ERROR_MESSAGE, SUCCESS_MESSAGE } from "@/globals/swal";
 import axios from "axios";
 import ToastBox from "@/globals/toasts";
 import AOS from "aos";
+import { Form } from "react-bootstrap";
 
-const Main = () => {
+const Main = ({ userID }) => {
   const {
     isFocused,
     setIsFocused,
@@ -26,6 +27,14 @@ const Main = () => {
   } = main_states();
 
   const [loading, setLoading] = useState(true);
+  const [currentID, setCurrentID] = useState();
+  const [reactions, setReactions] = useState();
+
+  useEffect(() => {
+    getPostsWithReactions();
+    setCurrentID(userID);
+    getReactions();
+  }, [currentID]);
 
   useEffect(() => {
     AOS.init();
@@ -37,7 +46,7 @@ const Main = () => {
     formData.append(
       "json",
       JSON.stringify({
-        user_id: "1001",
+        user_id: currentID,
         post_content: postContent,
       })
     );
@@ -55,11 +64,11 @@ const Main = () => {
           setToastBoxMessage("Post created");
           setShowSubmitToast(true);
           setPostContent("");
-          getPosts(); // Refresh the posts after adding a new one
-        } else if (res.data !== null || res.data.error) {
+          getPostsWithReactions();
+        } else if (res.data === null || res.data.error) {
           ERROR_MESSAGE(
             "Something went wrong getting the posts",
-            `${res.data.error}`
+            `${res.data}`
           );
         } else {
           ERROR_MESSAGE("Unknown Error", "An unknown error occurred");
@@ -72,71 +81,106 @@ const Main = () => {
     }
   };
 
-  const getPosts = async () => {
+  const getPostsWithReactions = async () => {
     setLoading(true);
+    try {
+      const postsRes = await axios.get(MAIN_ENDPOINT, {
+        params: { operation: "getPosts", json: "" },
+      });
+
+      if (postsRes.status === 200) {
+        if (postsRes.data !== null && postsRes.data.success) {
+          const posts = postsRes.data.success;
+
+          const reactionsRes = await axios.get(MAIN_ENDPOINT, {
+            params: { operation: "getReactions", json: "" },
+          });
+
+          if (reactionsRes.status === 200) {
+            if (reactionsRes.data !== null && reactionsRes.data.success) {
+              const reactions = reactionsRes.data.success;
+
+              const postsWithReactions = posts.map((post) => {
+                const postReactions = reactions.filter(
+                  (reaction) => reaction.post_id === post.post_id
+                );
+                return {
+                  ...post,
+                  reactions: postReactions,
+                  total_reactions: postReactions.length,
+                };
+              });
+
+              setPosts(postsWithReactions);
+            } else {
+              ERROR_MESSAGE("Error fetching reactions", `${reactionsRes.data}`);
+            }
+          } else {
+            ERROR_MESSAGE("Status Error", `${reactionsRes.status}`);
+          }
+        } else {
+          ERROR_MESSAGE("Error fetching posts", `${postsRes.data}`);
+        }
+      } else {
+        ERROR_MESSAGE("Status Error", `${postsRes.status}`);
+      }
+    } catch (error) {
+      ERROR_MESSAGE("Exception Error", `${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getReactions = async () => {
     try {
       const res = await axios.get(MAIN_ENDPOINT, {
         params: {
-          operation: "getPosts",
+          operation: "getReactions",
           json: "",
         },
       });
 
       if (res.status === 200) {
         if (res.data !== null && res.data.success) {
-          const postsWithStates = res.data.success.map((post) => ({
-            ...post,
-            isLiked: false,
-            showEmojiPicker: false,
-            selectedEmoji: null,
-          }));
-          setPosts(postsWithStates);
-        } else if (res.data === null || res.data.error) {
-          ERROR_MESSAGE(
-            "Something went wrong fetching posts",
-            `${res.data.error}`
-          );
+          setReactions(res.data.success);
+          // console.log(res.data.success);
         } else {
-          ERROR_MESSAGE(
-            "Unknown Error",
-            "An unknown error occurred while fetching posts"
-          );
+          ERROR_MESSAGE("Error reacting to post", `${res.data}`);
         }
       } else {
         ERROR_MESSAGE("Status Error", `${res.status}`);
       }
     } catch (error) {
-      ERROR_MESSAGE("Exception Error Getting Posts", `${error}`);
-    } finally {
-      setLoading(false);
+      ERROR_MESSAGE("Exceptio Error", `${error}`);
     }
   };
 
-  useEffect(() => {
-    getPosts();
-  }, []);
+  const selectEmoji = async (index, emoji) => {
+    // console.log("Emoji Selected: ", emoji);
 
-  const likePost = (index) => {
-    setPosts((prevPosts) =>
-      prevPosts.map((post, i) =>
-        i === index ? { ...post, isLiked: !post.isLiked } : post
-      )
-    );
-  };
+    if (emoji) {
+      try {
+        // Submit the reaction to the server
+        await submitReaction(posts[index].post_id, emoji);
 
-  const selectEmoji = (index, emoji) => {
-    setPosts((prevPosts) =>
-      prevPosts.map((post, i) =>
-        i === index
-          ? {
-              ...post,
-              selectedEmoji: emoji,
-              isLiked: true,
-              showEmojiPicker: false,
-            }
-          : post
-      )
-    );
+        // Update the local state to reflect the new emoji
+        setPosts((prevPosts) =>
+          prevPosts.map((post, i) =>
+            i === index
+              ? {
+                  ...post,
+                  selectedEmoji: emoji.native,
+                  isLiked: true,
+                  showEmojiPicker: false,
+                }
+              : post
+          )
+        );
+      } catch (error) {
+        // console.error("Error submitting reaction:", error);
+        ERROR_MESSAGE("Exception Error", `${error}`);
+      }
+    }
   };
 
   const toggleEmojiPicker = (index, show) => {
@@ -145,6 +189,42 @@ const Main = () => {
         i === index ? { ...post, showEmojiPicker: show } : post
       )
     );
+  };
+
+  const submitReaction = async (postId, emoji) => {
+    const formData = new FormData();
+    formData.append("operation", "reactToPost");
+    formData.append(
+      "json",
+      JSON.stringify({
+        post_id: postId,
+        user_id: currentID,
+        reaction: emoji.native,
+      })
+    );
+
+    try {
+      const res = await axios({
+        url: MAIN_ENDPOINT,
+        method: "POST",
+        data: formData,
+      });
+
+      if (res.status === 200) {
+        // console.log("Submit Emoji Data: ", res.data);
+        if (res.data.success) {
+          setToastBoxTitle("Success");
+          setToastBoxMessage("Reaction submitted");
+          setShowSubmitToast(true);
+        } else {
+          ERROR_MESSAGE("Error", res.data.error || "Failed to submit reaction");
+        }
+      } else {
+        ERROR_MESSAGE("Status Error", `Status code: ${res.status}`);
+      }
+    } catch (error) {
+      ERROR_MESSAGE("Exception Error", error.message);
+    }
   };
 
   return (
@@ -230,21 +310,30 @@ const Main = () => {
                       {post.selectedEmoji ? (
                         <span
                           role="img"
-                          aria-label={post.selectedEmoji.name}
+                          aria-label="User's reaction"
                           style={{ fontSize: "24px", cursor: "pointer" }}
-                          onClick={() => selectEmoji(index, null)}
                         >
-                          {post.selectedEmoji.native}
+                          {post.selectedEmoji}
+                        </span>
+                      ) : post.reactions.find(
+                          (reaction) => reaction.user_id === currentID
+                        ) ? (
+                        <span
+                          role="img"
+                          aria-label="User's reaction"
+                          style={{ fontSize: "24px", cursor: "pointer" }}
+                        >
+                          {
+                            post.reactions.find(
+                              (reaction) => reaction.user_id === currentID
+                            ).reaction_type
+                          }
                         </span>
                       ) : (
                         <img
-                          src={
-                            post.isLiked
-                              ? "/images/heart_filled.svg"
-                              : "/images/heart.svg"
-                          }
-                          alt={post.isLiked ? "Liked" : "Like"}
-                          onClick={() => likePost(index)}
+                          src="/images/heart.svg"
+                          alt="Like"
+                          onClick={() => toggleEmojiPicker(index, true)}
                         />
                       )}
                       {post.showEmojiPicker && (
@@ -260,13 +349,13 @@ const Main = () => {
                         />
                       )}
                     </div>
-                    <img src="/images/comment.svg" alt="" />
-                    <img src="/images/share.svg" alt="" />
+                    <img src="/images/comment.svg" alt="Comment" />
+                    <img src="/images/share.svg" alt="Share" />
                   </div>
 
                   <div className="interactions">
                     <span>0 replies</span>
-                    <span>{' '}&#8901;{' '}</span>
+                    <span> &#8901; </span>
                     <span>{post.total_reactions} likes</span>
                   </div>
                 </div>
