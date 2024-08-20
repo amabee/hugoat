@@ -29,7 +29,7 @@ export const Home = () => {
 
   return (
     <body>
-      <Navbar />
+      <Navbar username={currentUserName} image={currentUserImage} />
       <Main
         userID={currentUser}
         username={currentUserName}

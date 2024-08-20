@@ -43,6 +43,13 @@ const Main = ({ userID, username, image }) => {
   }, []);
 
   const addPosts = async () => {
+    if (postContent.length <= 0) {
+      setToastBoxTitle("Error");
+      setToastBoxMessage("Post Content can't be empty");
+      setShowSubmitToast(true);
+      return;
+    }
+
     const formData = new FormData();
     formData.append("operation", "addPost");
     formData.append(
@@ -52,10 +59,6 @@ const Main = ({ userID, username, image }) => {
         post_content: postContent,
       })
     );
-
-    formData.forEach((value, key) => {
-      console.log(`${key}: ${value}`);
-    });
 
     try {
       const res = await axios({
@@ -78,7 +81,7 @@ const Main = ({ userID, username, image }) => {
           );
         } else {
           ERROR_MESSAGE("Unknown Error", "An unknown error occurred");
-          console.log(res.data);
+          // console.log(res.data);
         }
       } else {
         ERROR_MESSAGE("Status error", `${res.status}`);
@@ -98,7 +101,7 @@ const Main = ({ userID, username, image }) => {
       if (postsRes.status === 200) {
         if (postsRes.data !== null && postsRes.data.success) {
           const posts = postsRes.data.success;
-          console.log(posts);
+          // console.log(posts);
           const reactionsRes = await axios.get(MAIN_ENDPOINT, {
             params: { operation: "getReactions", json: "" },
           });
@@ -239,7 +242,11 @@ const Main = ({ userID, username, image }) => {
       <main>
         <div id="input-area">
           <img
-            src={image && image.trim() !== "" ? IMAGE_LINK + image : "images/default.png"}
+            src={
+              image && image.trim() !== ""
+                ? IMAGE_LINK + image
+                : "images/default.png"
+            }
             alt="Profile Image"
             style={{ width: "50px", height: "auto" }}
           />
@@ -405,6 +412,7 @@ const Main = ({ userID, username, image }) => {
         onClose={() => setIsModalOpen(false)}
         post_id={selectedPostId}
         userID={currentID}
+        image={image}
       />
     </div>
   );

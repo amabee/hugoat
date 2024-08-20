@@ -1,10 +1,22 @@
 import Image from "next/image";
 import React, { useState } from "react";
-import NotificationsModal from "./NotificationsModal"; // Adjust the path as needed
+import NotificationsModal from "./NotificationsModal";
+import { ERROR_MESSAGE } from "@/globals/swal";
+import { useRouter } from "next/navigation";
+import { IMAGE_LINK } from "@/globals/endpoints";
 
-const Navbar = () => {
+const Navbar = ({ username, image }) => {
   const [showNotifications, setShowNotifications] = useState(false);
-
+  const router = useRouter();
+  const handleLogOut = () => {
+    try {
+      sessionStorage.removeItem("user");
+    } catch (error) {
+      ERROR_MESSAGE("Error", `${error}`);
+    } finally {
+      router.push("/");
+    }
+  };
   return (
     <aside style={{ fontSize: "15px", color: "white" }}>
       <div className="menu">
@@ -60,15 +72,15 @@ const Navbar = () => {
           </li>
           <li className="sidebar-item">
             <img
-              src="/images/maloi.jpg"
+              src={IMAGE_LINK + image}
               alt="Profile Picture"
               className="rounded-avatar"
             />
-            Profile
+            {username}
           </li>
         </ul>
       </div>
-      <div className="more sidebar-item">
+      <div className="more sidebar-item" onClick={() => handleLogOut()}>
         <svg
           width="24"
           height="25"

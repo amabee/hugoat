@@ -3,13 +3,19 @@ import { useEffect, useState } from "react";
 import { Modal, Button } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import Picker from "@emoji-mart/react";
-import { MAIN_ENDPOINT } from "@/globals/endpoints";
+import { IMAGE_LINK, MAIN_ENDPOINT } from "@/globals/endpoints";
 import axios from "axios";
 import { ERROR_MESSAGE, SUCCESS_MESSAGE } from "@/globals/swal";
 
-export default function CommentModal({ isOpen, onClose, post_id, userID }) {
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [selectedEmoji, setSelectedEmoji] = useState(null);
+export default function CommentModal({
+  isOpen,
+  onClose,
+  post_id,
+  userID,
+  image,
+}) {
+  const [emojiPickerVisibility, setEmojiPickerVisibility] = useState({});
+  const [selectedEmojis, setSelectedEmojis] = useState([]);
   const [comments, setComments] = useState([]);
   const [myComment, setMyComment] = useState("");
 
@@ -63,9 +69,45 @@ export default function CommentModal({ isOpen, onClose, post_id, userID }) {
         if (res.data !== null && res.data.success) {
           SUCCESS_MESSAGE("Success", "Commented");
           setMyComment("");
+          getComments();
         } else {
           ERROR_MESSAGE(
             "Something went wrong posting your comment",
+            `${res.data}`
+          );
+        }
+      } else {
+        ERROR_MESSAGE("Status Error", `${res.status}`);
+      }
+    } catch (error) {}
+  };
+
+  const reactToComment = async (commentID, reaction) => {
+    const formData = new FormData();
+    formData.append("operation", "reactToComment");
+    formData.append(
+      "json",
+      JSON.stringify({
+        comment_id: commentID,
+        user_id: userID,
+        reaction: reaction,
+      })
+    );
+
+    try {
+      const res = await axios({
+        url: MAIN_ENDPOINT,
+        method: "POST",
+        data: formData,
+      });
+
+      if (res.status === 200) {
+        if (res.data !== null && res.data.success) {
+          SUCCESS_MESSAGE("Success");
+          getComments();
+        } else {
+          ERROR_MESSAGE(
+            "Something went wrong reacting to the comment",
             `${res.data}`
           );
         }
@@ -81,22 +123,56 @@ export default function CommentModal({ isOpen, onClose, post_id, userID }) {
     }
   }, [isOpen]);
 
-  const handleEmojiSelect = (emoji) => {
-    setSelectedEmoji(emoji.native);
-    setShowEmojiPicker(false);
+  const handleEmojiSelect = (emoji, index) => {
+    const updatedEmojis = [...selectedEmojis];
+    updatedEmojis[index] = emoji.native;
+    setSelectedEmojis(updatedEmojis);
+    toggleEmojiPicker(index);
+
+    const emojiToReact = emoji.native;
+    const commentID = comments[index]?.comment_id;
+
+    if (commentID) {
+      reactToComment(commentID, emojiToReact);
+    }
+  };
+
+  const toggleEmojiPicker = (index) => {
+    setEmojiPickerVisibility((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  };
+
+  const extractEmoji = (reactionString) => {
+    const [emoji] = reactionString.split(":");
+    return emoji || "";
+  };
+
+  const isUserReaction = (reactionString, userID) => {
+    const [, userId] = reactionString.split(":");
+    return parseInt(userId, 10) === userID;
   };
 
   return (
-    <Modal show={isOpen} onHide={onClose} centered scrollable fullscreen={true}>
-      <Modal.Header closeButton className="bg-dark">
+    <Modal
+      show={isOpen}
+      onHide={onClose}
+      centered
+      scrollable
+      fullscreen={"xl-down"}
+      className="modal-xl"
+    >
+      <Modal.Header closeButton className="bg-secondary">
         <Modal.Title className="text-light">Comments</Modal.Title>
       </Modal.Header>
       <Modal.Body className="bg-dark">
         <div className="d-flex align-items-start border p-3 bg-dark rounded">
-          <div
+          <img
             className="rounded-circle bg-secondary me-3"
             style={{ width: "50px", height: "50px" }}
-          ></div>
+            src={IMAGE_LINK + image}
+          />
           <div className="flex-grow-1">
             <textarea
               type="text"
@@ -108,7 +184,6 @@ export default function CommentModal({ isOpen, onClose, post_id, userID }) {
               onChange={(e) => setMyComment(e.target.value)}
             />
             <div className="d-flex mt-2 position-relative">
-              <p className="text-light fs-5">1 likes</p>
               <Button
                 variant="secondary"
                 size="lg"
@@ -117,22 +192,6 @@ export default function CommentModal({ isOpen, onClose, post_id, userID }) {
               >
                 Submit
               </Button>
-
-              {showEmojiPicker && (
-                <div
-                  className="position-absolute"
-                  style={{
-                    top: "100%",
-                    left: 0,
-                    zIndex: 9999,
-                    background: "white",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                  }}
-                >
-                  <Picker onEmojiSelect={handleEmojiSelect} />
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -144,10 +203,12 @@ export default function CommentModal({ isOpen, onClose, post_id, userID }) {
                 className="d-flex align-items-start border p-3 bg-dark rounded mb-3"
                 key={index}
               >
-                <div
+                <img
+                  src={IMAGE_LINK + comment.image}
                   className="rounded-circle bg-secondary me-3"
                   style={{ width: "50px", height: "50px" }}
-                ></div>
+                />
+
                 <div className="flex-grow-1">
                   <div className="mb-3 mt-3 text-light">
                     <h3>@{comment.username}</h3>
@@ -159,28 +220,44 @@ export default function CommentModal({ isOpen, onClose, post_id, userID }) {
                         variant="secondary"
                         size="lg"
                         className="me-2"
-                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      >
-                        {selectedEmoji ? selectedEmoji : "Like"}
-                      </Button>
-                      <p className="text-light fs-5 mb-0">1 likes</p>
-                    </div>
-
-                    {showEmojiPicker && (
-                      <div
-                        className="position-absolute"
                         style={{
-                          top: "100%",
-                          left: 0,
-                          zIndex: 9999,
-                          background: "white",
-                          border: "1px solid #ccc",
-                          borderRadius: "4px",
+                          fontSize: selectedEmojis[index] ? "2rem" : "initial",
+                          lineHeight: "1",
                         }}
+                        onClick={() => toggleEmojiPicker(index)}
                       >
-                        <Picker onEmojiSelect={handleEmojiSelect} />
-                      </div>
-                    )}
+                        {comment.reactions
+                          ? isUserReaction(comment.reactions, userID)
+                            ? extractEmoji(comment.reactions)
+                            : "Like"
+                          : selectedEmojis[index]
+                          ? selectedEmojis[index]
+                          : "Like"}
+                      </Button>
+
+                      {emojiPickerVisibility[index] && (
+                        <div
+                          className="position-absolute"
+                          style={{
+                            top: "100%",
+                            left: 0,
+                            zIndex: 9999,
+                            background: "white",
+                            border: "1px solid #ccc",
+                            borderRadius: "4px",
+                          }}
+                        >
+                          <Picker
+                            onEmojiSelect={(emoji) =>
+                              handleEmojiSelect(emoji, index)
+                            }
+                          />
+                        </div>
+                      )}
+                      <p className="text-light fs-5 mb-0">
+                        {comment.total_reactions} Likes
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
