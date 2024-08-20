@@ -3,14 +3,14 @@ import React, { useState, useEffect } from "react";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 import main_states from "@/system_states/main_states";
-import { MAIN_ENDPOINT } from "@/globals/endpoints";
+import { IMAGE_LINK, MAIN_ENDPOINT } from "@/globals/endpoints";
 import { ERROR_MESSAGE, SUCCESS_MESSAGE } from "@/globals/swal";
 import axios from "axios";
 import ToastBox from "@/globals/toasts";
 import AOS from "aos";
 import CommentModal from "./CommentModal";
 
-const Main = ({ userID, username }) => {
+const Main = ({ userID, username, image }) => {
   const {
     isFocused,
     setIsFocused,
@@ -30,6 +30,7 @@ const Main = ({ userID, username }) => {
   const [currentID, setCurrentID] = useState();
   const [reactions, setReactions] = useState();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPostId, setSelectedPostId] = useState(null);
 
   useEffect(() => {
     getPostsWithReactions();
@@ -52,6 +53,10 @@ const Main = ({ userID, username }) => {
       })
     );
 
+    formData.forEach((value, key) => {
+      console.log(`${key}: ${value}`);
+    });
+
     try {
       const res = await axios({
         url: MAIN_ENDPOINT,
@@ -73,6 +78,7 @@ const Main = ({ userID, username }) => {
           );
         } else {
           ERROR_MESSAGE("Unknown Error", "An unknown error occurred");
+          console.log(res.data);
         }
       } else {
         ERROR_MESSAGE("Status error", `${res.status}`);
@@ -92,7 +98,7 @@ const Main = ({ userID, username }) => {
       if (postsRes.status === 200) {
         if (postsRes.data !== null && postsRes.data.success) {
           const posts = postsRes.data.success;
-
+          console.log(posts);
           const reactionsRes = await axios.get(MAIN_ENDPOINT, {
             params: { operation: "getReactions", json: "" },
           });
@@ -229,15 +235,17 @@ const Main = ({ userID, username }) => {
   };
 
   return (
-    <div className="container" style={{ color: "white", fontSize:"15px"}}>
-      <CommentModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
+    <div className="container" style={{ color: "white", fontSize: "15px" }}>
       <main>
         <div id="input-area">
-          <img src="/images/maloi.jpg" alt="Profile Image" />
-          <span className="input-username">Brugoy</span>
+          <img
+            src={image && image.trim() !== "" ? IMAGE_LINK + image : "images/default.png"}
+            alt="Profile Image"
+            style={{ width: "50px", height: "auto" }}
+          />
+          <span className="input-username">
+            @{username ? username : "No Username"}
+          </span>
           <textarea
             id="input-thread"
             cols="30"
@@ -277,9 +285,9 @@ const Main = ({ userID, username }) => {
               <div className="tweet" key={index}>
                 <div className="thread">
                   <img
-                    src="/images/maloi.jpg"
+                    src={IMAGE_LINK + post.image}
                     alt="Profile Pic"
-                    className="rounded-avatar"
+                    className="rounded-avatar bg-light"
                   />
                   <div className="thread-line"></div>
                 </div>
@@ -288,11 +296,11 @@ const Main = ({ userID, username }) => {
                   <div className="thread-data">
                     <div>
                       <span>@{post.username}</span>
-                      <img
+                      {/* <img
                         src="/images/verified.svg"
                         alt=""
                         style={{ width: "15px", height: "auto" }}
-                      />
+                      /> */}
                     </div>
                     <div className="info">
                       <span>
@@ -357,13 +365,15 @@ const Main = ({ userID, username }) => {
                     <img
                       src="/images/comment.svg"
                       alt="Comment"
-                      onClick={() => setIsModalOpen(true)}
+                      onClick={() => {
+                        setSelectedPostId(post.post_id);
+                        setIsModalOpen(true);
+                      }}
                     />
-                    <img src="/images/share.svg" alt="Share" />
                   </div>
 
                   <div className="interactions">
-                    <span>0 replies</span>
+                    <span>{post.total_comments} comments</span>
                     <span> &#8901; </span>
                     <span>{post.total_reactions} likes</span>
                   </div>
@@ -390,6 +400,12 @@ const Main = ({ userID, username }) => {
           />
         </div>
       </main>
+      <CommentModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        post_id={selectedPostId}
+        userID={currentID}
+      />
     </div>
   );
 };

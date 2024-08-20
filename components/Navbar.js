@@ -34,7 +34,8 @@ const Navbar = () => {
             </svg>
             Home
           </li>
-          <li className="sidebar-item">
+
+          {/* <li className="sidebar-item">
             <svg
               width="24"
               height="24"
@@ -50,7 +51,8 @@ const Navbar = () => {
               />
             </svg>
             Create
-          </li>
+          </li> */}
+
           <li className="sidebar-item">
             <svg
               width="24"

@@ -9,24 +9,32 @@ export const Home = () => {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState("");
   const [currentUserName, setCurrentUserName] = useState("");
+  const [currentUserImage, setCurrentUserImage] = useState("");
+
   useEffect(() => {
     const storedUser = sessionStorage.getItem("user");
     const user = JSON.parse(storedUser);
 
-    if (!user || !user.user_id) {
+    if (!user || !user.user_id || !user.username) {
       router.push("/");
     } else {
+      console.log(user.username);
       setCurrentUser(user.user_id);
-      setCurrentUser(user.username);
+      setCurrentUserName(user.username);
+      setCurrentUserImage(user.image);
     }
   }, [router]);
 
-  useEffect(() => {}, [currentUser, currentUserName]);
+  useEffect(() => {}, [currentUser, currentUserName, currentUserImage]);
 
   return (
     <body>
       <Navbar />
-      <Main userID={currentUser} />
+      <Main
+        userID={currentUser}
+        username={currentUserName}
+        image={currentUserImage}
+      />
     </body>
   );
 };
