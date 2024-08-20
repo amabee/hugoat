@@ -2,7 +2,7 @@ import Image from "next/image";
 import React from "react";
 const Navbar = () => {
   return (
-    <aside>
+    <aside style={{ fontSize: "15px", color: "white" }}>
       <div className="menu">
         <div className="row">
           <picture id="logo">
@@ -11,6 +11,7 @@ const Navbar = () => {
               alt="Threads"
               width={65}
               height={65}
+              className="mb-3"
             />
           </picture>
           <h4>WhoGoat</h4>

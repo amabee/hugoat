@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 export const Home = () => {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState("");
+  const [currentUserName, setCurrentUserName] = useState("");
   useEffect(() => {
     const storedUser = sessionStorage.getItem("user");
     const user = JSON.parse(storedUser);
@@ -16,10 +17,11 @@ export const Home = () => {
       router.push("/");
     } else {
       setCurrentUser(user.user_id);
+      setCurrentUser(user.username);
     }
   }, [router]);
 
-  useEffect(() => {}, [currentUser]);
+  useEffect(() => {}, [currentUser, currentUserName]);
 
   return (
     <body>

@@ -8,9 +8,9 @@ import { ERROR_MESSAGE, SUCCESS_MESSAGE } from "@/globals/swal";
 import axios from "axios";
 import ToastBox from "@/globals/toasts";
 import AOS from "aos";
-import { Form } from "react-bootstrap";
+import CommentModal from "./CommentModal";
 
-const Main = ({ userID }) => {
+const Main = ({ userID, username }) => {
   const {
     isFocused,
     setIsFocused,
@@ -29,6 +29,7 @@ const Main = ({ userID }) => {
   const [loading, setLoading] = useState(true);
   const [currentID, setCurrentID] = useState();
   const [reactions, setReactions] = useState();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     getPostsWithReactions();
@@ -228,11 +229,15 @@ const Main = ({ userID }) => {
   };
 
   return (
-    <div className="container">
+    <div className="container" style={{ color: "white", fontSize:"15px"}}>
+      <CommentModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
       <main>
         <div id="input-area">
           <img src="/images/maloi.jpg" alt="Profile Image" />
-          <span className="input-username">@Maloi</span>
+          <span className="input-username">Brugoy</span>
           <textarea
             id="input-thread"
             cols="30"
@@ -349,7 +354,11 @@ const Main = ({ userID }) => {
                         />
                       )}
                     </div>
-                    <img src="/images/comment.svg" alt="Comment" />
+                    <img
+                      src="/images/comment.svg"
+                      alt="Comment"
+                      onClick={() => setIsModalOpen(true)}
+                    />
                     <img src="/images/share.svg" alt="Share" />
                   </div>
 
